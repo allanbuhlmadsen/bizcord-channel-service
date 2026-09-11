@@ -1,13 +1,8 @@
-# Channel Service
+\# Bizcord — Channel Microservice
 
-Part of the Bizcord platform. Owns channels and channel membership,
-and is the source of truth for who may read and write in a channel.
 
-## Running locally
 
-    dotnet run --project src/ChannelService
+Service code lives in apps/channel-microservice/.
 
-## Structure
+See that folder's README for how to build and run it.
 
-    src/    service code
-    tests/  unit tests
