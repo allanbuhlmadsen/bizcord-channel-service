@@ -1,0 +1,6 @@
+@ChannelService_HostAddress = http://localhost:5130
+
+GET {{ChannelService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
