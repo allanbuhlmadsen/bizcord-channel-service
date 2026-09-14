@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/ChannelService.Shared/ChannelService.Shared.csproj" />
     <Project Path="src/ChannelService/ChannelService.csproj" />
   </Folder>
   <Folder Name="/tests/">

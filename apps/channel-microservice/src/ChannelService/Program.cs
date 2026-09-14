@@ -1,10 +1,14 @@
 using ChannelService.Messaging;
+using ChannelService.Models;
+using ChannelService.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton<IConverter<Channel, ChannelDto>, ChannelConverter>();
 
 builder.Services.AddMessageClient(
     builder.Configuration["Messaging:ConnectionString"]!);
