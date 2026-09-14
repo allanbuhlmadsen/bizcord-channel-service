@@ -11,6 +11,13 @@ public sealed class Channel
 
     public IReadOnlyCollection<ChannelMember> Members => _members;
 
+    // Required by Entity Framework Core when materializing from the database.
+    private Channel()
+    {
+        Name = null!;
+        Description = string.Empty;
+    }
+
     private Channel(
         Guid id,
         ChannelName name,

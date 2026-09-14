@@ -1,12 +1,22 @@
 using ChannelService.Messaging;
 using ChannelService.Models;
 using ChannelService.Shared;
+using ChannelService.Data;
+using ChannelService.Service;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<ChannelContext>(options =>
+    options.UseInMemoryDatabase("ChannelDb"));
+
+builder.Services.AddScoped<IChannelRepository, ChannelRepository>();
+builder.Services.AddScoped<IChannelAppService, ChannelAppService>();
+builder.Services.AddControllers();
 
 builder.Services.AddSingleton<IConverter<Channel, ChannelDto>, ChannelConverter>();
 
@@ -44,15 +54,7 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
-// Temporary: this service both publishes and consumes ChannelCreated.
-// It exists only to verify that IMessageClient works end to end. In the
-// real system another service would subscribe to this message.
-app.MapPost("/channels", async (string name, IMessageClient messageClient) =>
-{
-    var created = new ChannelCreated(Guid.NewGuid(), name);
-    await messageClient.PublishAsync(created);
-    return Results.Accepted();
-});
+app.MapControllers();
 
 app.Run();
 
