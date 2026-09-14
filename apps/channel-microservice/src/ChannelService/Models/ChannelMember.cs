@@ -8,6 +8,11 @@ public sealed class ChannelMember
     public MemberRole Role { get; private set; }
     public DateTimeOffset JoinedAt { get; }
 
+    // Required by Entity Framework Core when materializing from the database.
+    private ChannelMember()
+    {
+    }
+
     private ChannelMember(
         Guid id,
         Guid channelId,
