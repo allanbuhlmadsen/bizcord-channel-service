@@ -1,0 +1,26 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: bizcord-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+  channel-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bizcord-channel-service
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8000:8080"
+    environment:
+      - "Messaging__ConnectionString=host=rabbitmq;username=guest;password=guest"
