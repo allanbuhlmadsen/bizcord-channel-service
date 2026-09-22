@@ -23,7 +23,7 @@ builder.Services.AddSingleton<IConverter<Channel, ChannelDto>, ChannelConverter>
 builder.Services.AddMessageClient(
     builder.Configuration["Messaging:ConnectionString"]!);
 
-builder.Services.AddHostedService<ChannelCreatedListener>();
+builder.Services.AddMessageHandlers(typeof(Program).Assembly);
 
 var app = builder.Build();
 
