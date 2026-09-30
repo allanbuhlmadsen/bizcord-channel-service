@@ -8,6 +8,7 @@ public sealed class Channel
     public ChannelName Name { get; private set; }
     public string Description { get; private set; }
     public DateTimeOffset CreatedAt { get; }
+    public DateTimeOffset? LastActivityAt { get; private set; }
 
     public IReadOnlyCollection<ChannelMember> Members => _members;
 
@@ -47,6 +48,14 @@ public sealed class Channel
     public void ChangeDescription(string newDescription)
     {
         Description = newDescription ?? string.Empty;
+    }
+
+    public void RecordActivity(DateTimeOffset occurredAt)
+    {
+        if (LastActivityAt is null || occurredAt > LastActivityAt)
+        {
+            LastActivityAt = occurredAt;
+        }
     }
 
     public ChannelMember AddMember(Guid userId, MemberRole role)
