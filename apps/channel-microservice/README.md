@@ -17,6 +17,13 @@ Stop everything again:
 
     docker compose down
 
+## Running the tests
+
+Unit tests run on their own. The integration test needs a running broker:
+
+    docker compose up -d rabbitmq
+    dotnet test
+
 ## Running locally
 
 Requires RabbitMQ on localhost:5672.

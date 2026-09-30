@@ -11,6 +11,7 @@ WORKDIR /src
 
 COPY ["src/ChannelService/ChannelService.csproj", "src/ChannelService/"]
 COPY ["src/ChannelService.Shared/ChannelService.Shared.csproj", "src/ChannelService.Shared/"]
+COPY ["src/Shared.Contracts/Shared.Contracts.csproj", "src/Shared.Contracts/"]
 RUN dotnet restore "src/ChannelService/ChannelService.csproj"
 
 COPY ["src/", "src/"]
