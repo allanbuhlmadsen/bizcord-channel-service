@@ -1,4 +1,5 @@
-﻿namespace ChannelService.Messaging;
+﻿using Shared.Contracts.Events;
+namespace ChannelService.Messaging;
 
 // Temporary: handles a message this same service publishes, purely to
 // verify that handler discovery works. In the real system another

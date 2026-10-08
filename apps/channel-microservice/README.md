@@ -49,5 +49,6 @@ Example:
 ## Structure
 
     src/ChannelService/         service code
-    src/ChannelService.Shared/  contract other services can reference
-    tests/                      unit tests
+    src/ChannelService.Shared/  this service's outward contract (ChannelDto)
+    src/Shared.Contracts/       events shared across the system
+    tests/                      unit, contract and integration tests

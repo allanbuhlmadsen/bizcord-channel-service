@@ -1,6 +1,30 @@
 @ChannelService_HostAddress = http://localhost:5130
 
-GET {{ChannelService_HostAddress}}/weatherforecast/
+### List all channels
+GET {{ChannelService_HostAddress}}/channels
 Accept: application/json
 
-###
+### Create a channel
+POST {{ChannelService_HostAddress}}/channels
+Content-Type: application/json
+
+{
+  "name": "general",
+  "description": "General discussion"
+}
+
+### Get a single channel
+GET {{ChannelService_HostAddress}}/channels/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+### Update a channel
+PUT {{ChannelService_HostAddress}}/channels/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "name": "general",
+  "description": "Updated description"
+}
+
+### Delete a channel
+DELETE {{ChannelService_HostAddress}}/channels/00000000-0000-0000-0000-000000000000
