@@ -1,4 +1,5 @@
-﻿using ChannelService.Contracts;
+﻿using Shared.Contracts.Events;
+using ChannelService.Contracts;
 using ChannelService.Data;
 using ChannelService.Models;
 using ChannelService.Shared;
