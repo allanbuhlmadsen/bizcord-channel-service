@@ -38,8 +38,21 @@ public sealed class ChannelAppService : IChannelAppService
         return channel is null ? null : _converter.Convert(channel);
     }
 
+    
+    public async Task<IEnumerable<ChannelDto>> GetForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var channels = await _repository.GetAllAsync(cancellationToken);
+
+        return channels
+            .Where(channel => channel.Members.Any(member => member.UserId == userId))
+            .Select(_converter.Convert);
+    }
+
     public async Task<ChannelDto> CreateAsync(
         CreateChannelRequest request,
+        Guid? createdBy,
         CancellationToken cancellationToken = default)
     {
         var name = ParseName(request.Name);
@@ -50,6 +63,12 @@ public sealed class ChannelAppService : IChannelAppService
         }
 
         var channel = Channel.Create(name, request.Description ?? string.Empty);
+
+        if (createdBy is not null)
+        {
+            channel.AddMember(createdBy.Value, MemberRole.Admin);
+        }
+
         await _repository.AddAsync(channel, cancellationToken);
 
         await _messageClient.PublishAsync(

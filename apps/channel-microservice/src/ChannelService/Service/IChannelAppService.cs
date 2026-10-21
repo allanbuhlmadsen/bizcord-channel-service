@@ -11,9 +11,14 @@ public interface IChannelAppService
     Task<ChannelDto?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);
+    
+    Task<IEnumerable<ChannelDto>> GetForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
 
     Task<ChannelDto> CreateAsync(
         CreateChannelRequest request,
+        Guid? createdBy,
         CancellationToken cancellationToken = default);
 
     Task<ChannelDto?> UpdateAsync(

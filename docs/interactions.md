@@ -75,9 +75,11 @@ The membership check is a direct call, because the Messaging Service cannot acce
 
 ## What is implemented
 
-The Channel Service currently exposes `/channels` with create, read, update and delete, publishes `ChannelCreated` and `ChannelActivityUpdatedEvent`, and consumes `MessagePostedEvent`.
+The Channel Service exposes `/channels` with create, read, update and delete, plus `GET /channels/user/me`, which lists the channels the caller is a member of. It publishes `ChannelCreated` and `ChannelActivityUpdatedEvent`, and consumes `MessagePostedEvent`.
 
-The membership check drawn above is part of the design but has no endpoint yet. The domain model carries membership and roles, so the data is there; what is missing is a read endpoint for other services to ask against, along the lines of `GET /channels/{id}/members/{userId}`. Until it exists, no other service can perform that check.
+Creating a channel records the caller as an `Admin` member of it. The caller's identity arrives in an `X-UserId` header, which an API gateway populates from a validated token after discarding whatever the client sent. The service treats that header as the only source of caller identity, and returns `401` from `/channels/user/me` when it is absent.
+
+The membership check drawn above is still design rather than implementation. Membership data now exists, but no endpoint lets another service ask whether a given user may write in a given channel — something along the lines of `GET /channels/{id}/members/{userId}`.
 
 ## Contracts
 

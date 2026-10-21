@@ -32,19 +32,28 @@ Requires RabbitMQ on localhost:5672.
 
 ## Endpoints
 
-| Method | Path            | Purpose                |
-| ------ | --------------- | ---------------------- |
-| GET    | /channels       | List all channels      |
-| GET    | /channels/{id}  | Get a single channel   |
-| POST   | /channels       | Create a channel       |
-| PUT    | /channels/{id}  | Update a channel       |
-| DELETE | /channels/{id}  | Delete a channel       |
+One row per endpoint. "Method" is the HTTP method, "Path" the address, and "Purpose" what the call does.
+
+| Method | Path              | Purpose                                 |
+| ------ | ----------------- | --------------------------------------- |
+| GET    | /channels         | List all channels                       |
+| GET    | /channels/{id}    | Get a single channel                    |
+| GET    | /channels/user/me | List channels the caller is a member of |
+| POST   | /channels         | Create a channel                        |
+| PUT    | /channels/{id}    | Update a channel                        |
+| DELETE | /channels/{id}    | Delete a channel                        |
 
 Example:
 
     curl -X POST http://localhost:8000/channels \
       -H "Content-Type: application/json" \
       -d '{ "name": "general", "description": "General discussion" }'
+
+### Caller identity
+
+`GET /channels/user/me` needs an `X-UserId` header holding the caller's id, and returns `401` without it. `POST /channels` reads the same header and records the caller as an `Admin` member of the new channel; without the header the channel is still created, but with no members.
+
+An API gateway in front of this service is expected to populate that header from a validated token and to strip whatever the client sent. A direct call to this service bypasses that, so a real deployment must keep the service unreachable except through the gateway.
 
 ## Structure
 

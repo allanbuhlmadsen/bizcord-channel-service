@@ -33,14 +33,31 @@ public sealed class ChannelsController : ControllerBase
         return channel is null ? NotFound() : Ok(channel);
     }
 
+    [HttpGet("user/me")]
+    public async Task<ActionResult<IEnumerable<ChannelDto>>> GetForCurrentUser(
+        [FromHeader(Name = "X-UserId")] string? userId,
+        CancellationToken cancellationToken)
+    {
+        var currentUser = ParseUserId(userId);
+
+        if (currentUser is null)
+        {
+            return Unauthorized();
+        }
+
+        var channels = await _service.GetForUserAsync(currentUser.Value, cancellationToken);
+        return Ok(channels);
+    }
+
     [HttpPost]
     public async Task<ActionResult<ChannelDto>> Create(
         [FromBody] CreateChannelRequest request,
+        [FromHeader(Name = "X-UserId")] string? userId,
         CancellationToken cancellationToken)
     {
         try
         {
-            var created = await _service.CreateAsync(request, cancellationToken);
+            var created = await _service.CreateAsync(request, ParseUserId(userId), cancellationToken);
             return CreatedAtRoute(
                 "GetChannelById",
                 new { id = created.Id },
@@ -85,4 +102,7 @@ public sealed class ChannelsController : ControllerBase
         var deleted = await _service.DeleteAsync(id, cancellationToken);
         return deleted ? NoContent() : NotFound();
     }
+    
+    private static Guid? ParseUserId(string? value) =>
+        Guid.TryParse(value, out var userId) ? userId : null;
 }
