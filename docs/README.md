@@ -9,6 +9,7 @@ Bizcord is a business communication platform similar to Discord or Slack. The sy
 - [Domains and microservices](domains.md) — the functional domains identified in the system, and what each service is responsible for
 - [Boundaries and data ownership](boundaries.md) — where the lines between services are drawn, and who owns which data
 - [Interactions](interactions.md) — how the services communicate, and the event flows this service takes part in
+- [Failure points](../apps/channel-microservice/failure-points.md) — known and suspected ways the Channel Service can fail, and what has been measured
 
 ## Scope
 
