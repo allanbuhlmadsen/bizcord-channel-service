@@ -12,15 +12,18 @@ public sealed class ChannelAppService : IChannelAppService
     private readonly IChannelRepository _repository;
     private readonly IConverter<Channel, ChannelDto> _converter;
     private readonly IMessageClient _messageClient;
+    private readonly ILogger<ChannelAppService> _logger;
 
     public ChannelAppService(
         IChannelRepository repository,
         IConverter<Channel, ChannelDto> converter,
-        IMessageClient messageClient)
+        IMessageClient messageClient,
+        ILogger<ChannelAppService> logger)
     {
         _repository = repository;
         _converter = converter;
         _messageClient = messageClient;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<ChannelDto>> GetAllAsync(
@@ -71,9 +74,22 @@ public sealed class ChannelAppService : IChannelAppService
 
         await _repository.AddAsync(channel, cancellationToken);
 
-        await _messageClient.PublishAsync(
-            new ChannelCreated(channel.Id, channel.Name.Value),
-            cancellationToken);
+        try
+        {
+            await _messageClient.PublishAsync(
+                new ChannelCreated(channel.Id, channel.Name.Value),
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            // Degrade rather than fail: the channel exists and the caller gets
+            // it back. What is lost is the announcement — other services will
+            // not learn about this channel. See failure-points.md.
+            _logger.LogError(
+                exception,
+                "Channel {ChannelId} was created but ChannelCreated could not be published",
+                channel.Id);
+        }
 
         return _converter.Convert(channel);
     }
