@@ -75,3 +75,47 @@ There is no rate limiting. A burst — intended or not — reaches the service a
 It does. After `docker restart bizcord-rabbitmq`, a channel created a minute later still reached `ChannelCreatedHandler`. EasyNetQ re-establishes both the connection and the subscriptions on its own.
 
 The gap is not the subscription but the window during the outage, which finding 5 covers.
+
+## Measures implemented
+
+Findings 1, 4 and 5 were addressed together, since all three concern the single publish inside `POST /channels`.
+
+### Which layer
+
+Timeout and retry live in `EasyNetQMessageClient`, the adapter that wraps EasyNetQ. How long a publish may take, and how often it is worth trying again, are properties of the transport; no caller should have to know them.
+
+The fallback lives in `ChannelAppService`. Whether a channel may be created without anyone being told is a question about the business, not about RabbitMQ, and the service layer is the first place that can answer it.
+
+### Which patterns, and why
+
+**Timeout**, because the 11 seconds were EasyNetQ's own and nothing in this service had chosen them. One second per attempt: a publish to a healthy broker completes in well under a millisecond.
+
+**Retry**, because the outage measured in finding 5 lasted under a minute and healed by itself. Two retries, 200 ms and 400 ms apart.
+
+**Fallback**, because the alternative is finding 1: the caller is told the operation failed while the data is already stored, and a retry then collides with the name that is now taken. Implemented as a `try`/`catch` rather than Polly's fallback strategy, which supplies a replacement value and so does not apply to an operation that returns none.
+
+**Not a circuit breaker.** Three attempts over roughly four seconds is a cost this service can carry, and the outage that was measured was short. A breaker earns its place when outages are long and traffic is high; neither has been observed here.
+
+### How it was tested
+
+One row per measure. "How" is the way it was exercised, "Result" what came out.
+
+| Measure | How | Result |
+| --- | --- | --- |
+| Fallback | Unit test with a message client that always throws | The channel is returned and stored, and publishing was attempted |
+| Timeout and retry | Broker stopped, `POST /channels` timed | 4.4 s and `201`, against 11 s and `500` before the change |
+| Normal operation | Broker running, `POST /channels` timed | 0.14 s, and the event reached its handler |
+
+The log during the outage shows both the retries and the fallback:
+
+    Publish failed, retrying in 00:00:00.2000000. Attempt 2 of 3.
+    Publish failed, retrying in 00:00:00.4000000. Attempt 3 of 3.
+    Channel 80ec8617-... was created but ChannelCreated could not be published
+
+### What is still wrong
+
+The event is still lost. The caller no longer sees a failure, and the loss is recorded rather than silent, but no other service learns about the channel.
+
+The fix is an outbox: store the event in the database in the same operation as the channel, and let a background process publish it once the broker is reachable. That removes the write to two places instead of softening its consequences, and it is the right next step.
+
+Findings 2, 3, 6, 7, 8 and 9 are untouched.
