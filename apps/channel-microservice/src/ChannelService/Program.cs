@@ -3,6 +3,7 @@ using ChannelService.Models;
 using ChannelService.Shared;
 using ChannelService.Data;
 using ChannelService.Service;
+using ChannelService.Secrets;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,8 +21,13 @@ builder.Services.AddControllers();
 
 builder.Services.AddSingleton<IConverter<Channel, ChannelDto>, ChannelConverter>();
 
+var messagingHost = builder.Configuration["Messaging:Host"]
+    ?? throw new InvalidOperationException("Messaging:Host is not configured.");
+
+var credentials = VaultSecretReader.ReadMessagingCredentials(builder.Configuration);
+
 builder.Services.AddMessageClient(
-    builder.Configuration["Messaging:ConnectionString"]!);
+    $"host={messagingHost};username={credentials.Username};password={credentials.Password}");
 
 builder.Services.AddMessageHandlers(typeof(Program).Assembly);
 

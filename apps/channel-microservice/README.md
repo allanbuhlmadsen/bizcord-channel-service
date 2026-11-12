@@ -5,29 +5,73 @@ and is the source of truth for who may read and write in a channel.
 
 ## Running with Docker Compose
 
-Starts RabbitMQ and the service together. The service waits for
-RabbitMQ to pass its health check before starting.
+Starts RabbitMQ, HashiCorp Vault and the service together. The service waits for RabbitMQ to pass its health check, and reads its messaging credentials from Vault at startup. See "Secrets" below for what Vault needs before the first run.
 
     docker compose up -d --build
 
 - API: http://localhost:8000
 - RabbitMQ management UI: http://localhost:15672 (guest / guest)
+- Vault UI: http://localhost:8200
 
 Stop everything again:
 
     docker compose down
 
+Do not use `docker compose down -v`. That deletes the `vault-data` volume, and with it every secret and the initialisation itself.
+
+## Secrets
+
+The RabbitMQ username and password are not in this repository. They live in Vault under `secret/channel-service`, and the service reads them at startup. The host name stays in ordinary configuration — `localhost` in `appsettings.json`, `rabbitmq` in `docker-compose.yml` — because a host name is not a secret.
+
+### First-time setup
+
+Vault starts empty and sealed.
+
+1. Open http://localhost:8200 and initialise it with 3 key shares and a threshold of 2. Save the unseal keys and the root token somewhere outside this repository. They are shown once.
+2. Unseal with two of the keys and sign in with the root token.
+3. Create the secret, a read-only policy and a scoped token:
+
+       docker compose exec vault sh
+       vault login
+       vault secrets enable -path=secret kv-v2
+       vault kv put secret/channel-service Username=guest Password=guest
+       printf 'path "secret/data/channel-service" { capabilities = ["read"] }' | vault policy write channel-service-read -
+       vault token create -policy=channel-service-read -no-default-policy -ttl=1h
+       exit
+
+4. Put the token from the last command in a file named `.env` next to `docker-compose.yml`:
+
+       VAULT_TOKEN=hvs.your-token-here
+
+   `.env` is ignored by git and must stay that way. The root token is for administration and must never be given to the service.
+
+### Every time
+
+Vault is sealed again whenever its container restarts. Unseal it at http://localhost:8200 before starting the service.
+
+The application token expires. Create a new one with the `vault token create` command above and update `.env`.
+
+### When Vault is unavailable
+
+The service does not start. There is no fallback, and that is deliberate: a fallback would mean a copy of the credentials somewhere outside Vault, which is what this is meant to remove.
+
+A service that is **already running** keeps working while Vault is sealed, because it read the secret once at startup and holds it in memory. The task text says requests should fail while Vault is sealed; that holds for a service that reads the secret on every request, not for one that reads it at startup, which is what the same task text asks for. The failure shows up on the next start.
+
 ## Running the tests
 
-Unit tests run on their own. The integration test needs a running broker:
+Unit tests run on their own. The integration test boots the service through `WebApplicationFactory`, so it needs everything the service needs: a running broker, an unsealed Vault, and a token. In PowerShell:
 
-    docker compose up -d rabbitmq
+    docker compose up -d rabbitmq vault
+    $env:VAULT_TOKEN = "hvs.your-token-here"
     dotnet test
+
+Stop the `channel-service` container first if it is running. It shares the subscription id with the test and will consume the test's messages.
 
 ## Running locally
 
-Requires RabbitMQ on localhost:5672.
+Requires RabbitMQ on localhost:5672 and an unsealed Vault on localhost:8200. In PowerShell:
 
+    $env:VAULT_TOKEN = "hvs.your-token-here"
     dotnet run --project src/ChannelService
 
 ## Endpoints
