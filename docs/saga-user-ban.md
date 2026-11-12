@@ -28,9 +28,9 @@ One row per step. "Started by" is the command that begins it, "Success" and "Fai
 | 1 | User Management | `BanUser` | `UserBanned` | `UserBanFailed` | `UnbanUser` → `UserBanReverted` |
 | 2 | Streaming | `TerminateActiveCalls` | `ActiveCallsTerminated` | `CallTerminationFailed` | None possible |
 | 3 | Channel | `RemoveUserFromChannels` | `UserRemovedFromChannels` | `ChannelRemovalFailed` | `RestoreChannelMemberships` → `ChannelMembershipsRestored` |
-| 4 | Messaging | `PostRemovalNotices` | `RemovalNoticesPosted` | `RemovalNoticePostingFailed` | `DeleteRemovalNotices` → `RemovalNoticesDeleted` |
+| 4 | Messaging | `PostRemovalNotices` | `RemovalNoticesPosted` | `RemovalNoticePostingFailed` | None needed |
 
-The saga is started by `InitiateBan`, which a moderator triggers.
+Two steps have no compensating action, and the reasons are different. Step 2 has none that is possible: a terminated call cannot be restored. Step 4 has none that is needed: it is the last step, so nothing after it can fail and it is never rolled back. Only the first of the two leaves the system in a state the saga is unable to undo.
 
 ## Happy path
 
@@ -90,7 +90,19 @@ A terminated call cannot be restored. Streaming can give the user access again, 
 
 The orchestrator does not pretend otherwise. It records that the compensation for step 2 was impossible and leaves the saga in a state that says so: rolled back, but not to the state it started in. Someone has to be told, and that is an operator's job rather than something the system can resolve on its own.
 
-The same holds in a weaker form for the system messages in step 4. They can be deleted, but members who were online have already read them.
+Something similar would apply to the system messages in step 4 if the workflow were ever extended with a step after it. They could be deleted, but members who were online have already read them.
+
+## What is implemented in this repository
+
+Channel Service is the only service that exists, so part of the saga is real and part of it is not.
+
+The orchestrator is real. It runs inside Channel Service, subscribes to every message in the saga, keeps its state in a store of its own, and sends the commands and compensating commands described above.
+
+Channel Service's own step is real. One handler removes the user from every channel they belong to and records what it removed; another puts those memberships back with the role each one had. Both publish their result on the broker, and the orchestrator picks it up there, so step 3 runs over RabbitMQ from end to end.
+
+User Management, Streaming and Messaging do not exist. The commands addressed to them are published and nothing consumes them. In the tests, the test code plays those services: it sends the events they would have sent, and that is what drives the saga forward, or backwards in the failure cases.
+
+What is therefore not demonstrated is a real distributed failure. The failures in the tests are events a test chose to send, not a service that actually broke.
 
 ## Why orchestration
 
