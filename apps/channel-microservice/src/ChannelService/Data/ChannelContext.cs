@@ -11,6 +11,7 @@ public sealed class ChannelContext : DbContext
     }
 
     public DbSet<Channel> Channels => Set<Channel>();
+    public DbSet<RemovedMembership> RemovedMemberships => Set<RemovedMembership>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +48,12 @@ public sealed class ChannelContext : DbContext
             member.Property(m => m.UserId).IsRequired();
             member.Property(m => m.Role).IsRequired();
             member.Property(m => m.JoinedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<RemovedMembership>(removal =>
+        {
+            removal.HasKey(r => r.Id);
+            removal.HasIndex(r => r.SagaId);
         });
     }
 }

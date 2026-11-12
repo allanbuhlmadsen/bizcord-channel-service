@@ -54,6 +54,10 @@ Solid arrows are direct calls where the caller waits for a reply. Dashed arrows 
 
 Both tables list one event per row. "Fields" names what travels with the event; `MessageId` is carried through so a message can be traced across services.
 
+### Saga messages
+
+The two tables above cover the events this service exchanges on its own behalf. It also takes part in the user ban saga, which adds a set of commands and events of its own — including several that reach this service only because it hosts the saga's coordinator. They are described in [Saga: a user is banned](saga-user-ban.md).
+
 ## Flow: a message is posted
 
 ```mermaid

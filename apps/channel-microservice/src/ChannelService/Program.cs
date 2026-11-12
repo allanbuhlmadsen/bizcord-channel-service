@@ -4,6 +4,7 @@ using ChannelService.Shared;
 using ChannelService.Data;
 using ChannelService.Service;
 using ChannelService.Secrets;
+using ChannelService.Sagas;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,8 +16,13 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<ChannelContext>(options =>
     options.UseInMemoryDatabase("ChannelDb"));
 
+builder.Services.AddDbContext<SagaContext>(options =>
+    options.UseInMemoryDatabase("SagaDb"));
+
 builder.Services.AddScoped<IChannelRepository, ChannelRepository>();
 builder.Services.AddScoped<IChannelAppService, ChannelAppService>();
+builder.Services.AddScoped<ISagaStateRepository, SagaStateRepository>();
+builder.Services.AddScoped<IRemovedMembershipRepository, RemovedMembershipRepository>();
 builder.Services.AddControllers();
 
 builder.Services.AddSingleton<IConverter<Channel, ChannelDto>, ChannelConverter>();
