@@ -34,14 +34,15 @@ Requires RabbitMQ on localhost:5672.
 
 One row per endpoint. "Method" is the HTTP method, "Path" the address, and "Purpose" what the call does.
 
-| Method | Path              | Purpose                                 |
-| ------ | ----------------- | --------------------------------------- |
-| GET    | /channels         | List all channels                       |
-| GET    | /channels/{id}    | Get a single channel                    |
-| GET    | /channels/user/me | List channels the caller is a member of |
-| POST   | /channels         | Create a channel                        |
-| PUT    | /channels/{id}    | Update a channel                        |
-| DELETE | /channels/{id}    | Delete a channel                        |
+| Method | Path                            | Purpose                                                      |
+| ------ | ------------------------------- | ------------------------------------------------------------ |
+| GET    | /channels                       | List all channels                                            |
+| GET    | /channels/{id}                  | Get a single channel                                         |
+| GET    | /channels/user/me               | List channels the caller is a member of                      |
+| GET    | /channels/{id}/members/{userId} | Whether a user is a member of a channel, and with which role |
+| POST   | /channels                       | Create a channel                                             |
+| PUT    | /channels/{id}                  | Update a channel                                             |
+| DELETE | /channels/{id}                  | Delete a channel                                             |
 
 Example:
 
@@ -55,9 +56,15 @@ Example:
 
 An API gateway in front of this service is expected to populate that header from a validated token and to strip whatever the client sent. A direct call to this service bypasses that, so a real deployment must keep the service unreachable except through the gateway.
 
+### Internal endpoints
+
+`GET /channels/{id}/members/{userId}` is meant for other services, not for clients. It needs an `X-Role` header with the value `internal-service` and returns `403` without one.
+
+An API gateway sets that header from a `role` claim in the caller's token and removes whatever the client sent, in the same way it sets `X-UserId`. A client's own token is refused even though it is valid, because it carries a scope rather than a role.
+
 ## Structure
 
     src/ChannelService/         service code
-    src/ChannelService.Shared/  this service's outward contract (ChannelDto)
+    src/ChannelService.Shared/  this service's outward contract (DTOs)
     src/Shared.Contracts/       events shared across the system
     tests/                      unit, contract and integration tests
