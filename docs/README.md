@@ -10,6 +10,7 @@ Bizcord is a business communication platform similar to Discord or Slack. The sy
 - [Boundaries and data ownership](boundaries.md) — where the lines between services are drawn, and who owns which data
 - [Interactions](interactions.md) — how the services communicate, and the event flows this service takes part in
 - [Failure points](../apps/channel-microservice/failure-points.md) — known and suspected ways the Channel Service can fail, and what has been measured
+- [Saga: a user is banned](saga-user-ban.md) — the ban workflow as a saga, its compensating actions, and why it is orchestrated
 
 ## Scope
 
