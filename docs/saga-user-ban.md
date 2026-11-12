@@ -84,6 +84,14 @@ sequenceDiagram
     U-->>O: UserBanReverted
 ```
 
+### The question the scenario asks
+
+*If the ban succeeds but the voice termination fails, is the user banned?*
+
+No. The saga rolls back, and `UnbanUser` returns the user to the state they were in. Nothing irreversible has happened at that point: step 2 failed, so there are no terminated calls to restore and no memberships to put back. The system ends consistent, and the moderator is told the ban did not go through.
+
+Whether that is the right answer is a different question. A moderator decided to remove someone, and a failure in the voice service is a poor reason to let them keep posting. The alternative is to treat the ban as final and keep retrying the termination, which is the forward recovery discussed at the end of this document. The saga is modelled the other way because the assignment asks for compensating transactions, and because rolling back is the behaviour that can be demonstrated.
+
 ## What cannot be undone
 
 A terminated call cannot be restored. Streaming can give the user access again, but the conversation the other participants were in is over, and nothing puts them back in it.
