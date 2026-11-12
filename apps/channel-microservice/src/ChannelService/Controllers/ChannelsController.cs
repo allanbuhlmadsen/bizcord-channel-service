@@ -9,6 +9,7 @@ namespace ChannelService.Controllers;
 [Route("channels")]
 public sealed class ChannelsController : ControllerBase
 {
+    private const string InternalServiceRole = "internal-service";
     private readonly IChannelAppService _service;
 
     public ChannelsController(IChannelAppService service)
@@ -47,6 +48,24 @@ public sealed class ChannelsController : ControllerBase
 
         var channels = await _service.GetForUserAsync(currentUser.Value, cancellationToken);
         return Ok(channels);
+    }
+
+    [HttpGet("{channelId:guid}/members/{userId:guid}")]
+    public async Task<ActionResult<ChannelMembershipDto>> GetMembership(
+        Guid channelId,
+        Guid userId,
+        [FromHeader(Name = "X-Role")] string? role,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(role, InternalServiceRole, StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var membership = await _service.GetMembershipAsync(
+            channelId, userId, cancellationToken);
+
+        return membership is null ? NotFound() : Ok(membership);
     }
 
     [HttpPost]

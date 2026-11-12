@@ -79,7 +79,17 @@ The Channel Service exposes `/channels` with create, read, update and delete, pl
 
 Creating a channel records the caller as an `Admin` member of it. The caller's identity arrives in an `X-UserId` header, which an API gateway populates from a validated token after discarding whatever the client sent. The service treats that header as the only source of caller identity, and returns `401` from `/channels/user/me` when it is absent.
 
-The membership check drawn above is still design rather than implementation. Membership data now exists, but no endpoint lets another service ask whether a given user may write in a given channel — something along the lines of `GET /channels/{id}/members/{userId}`.
+The membership check drawn above now exists. `GET /channels/{channelId}/members/{userId}` answers whether a user belongs to a channel and with which role. It is meant for other services rather than for clients, and is protected differently from the rest.
+
+## Two kinds of caller
+
+Requests reaching this service come from one of two directions, and the tokens prove different things.
+
+**Clients, through the gateway.** A client's token carries `sub`, the user's identity, and a scope such as `channel.read` or `channel.write`. The gateway checks the scope and forwards the identity as an `X-UserId` header. These are the `/channels` endpoints a user interface would call.
+
+**Other services, also through the gateway.** A service's token carries `role: internal-service` instead. The gateway checks it with Ocelot's `RouteClaimsRequirement` and forwards it as an `X-Role` header. Only the membership endpoint is reached this way, and a client token is refused with `403` even though it is valid.
+
+Both identity headers are removed from the incoming request before the gateway sets them from validated claims, so a client cannot supply either one. The membership endpoint also refuses a request that arrives without `X-Role`, which is what a call made directly to the service rather than through the gateway looks like.
 
 ## Contracts
 
@@ -91,4 +101,4 @@ In a monorepo the shared project would sit at `packages/Shared.Contracts`, next 
 
 That weakens the guarantee. Two services can hold definitions of the same event that differ without anyone noticing until a message fails to deserialize at runtime. The compile-time check only works within one repository.
 
-Note that `Shared.Contracts` and `ChannelService.Shared` are two different things. `Shared.Contracts` holds events the whole system exchanges. `ChannelService.Shared` holds `ChannelDto`, which is this service's own contract for its REST API.
+Note that `Shared.Contracts` and `ChannelService.Shared` are two different things. `Shared.Contracts` holds events the whole system exchanges. `ChannelService.Shared` holds `ChannelDto` and `ChannelMembershipDto`, which are this service's own contract for its REST API.

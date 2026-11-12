@@ -36,4 +36,52 @@ public class ChannelAppServiceTests
         var stored = await repository.GetByIdAsync(created.Id, CancellationToken.None);
         stored.Should().NotBeNull();
     }
+
+
+    [Fact]
+    public async Task GetMembershipAsync_ReportsTheRole_WhenTheUserIsAMember()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var channel = Channel.Create(ChannelName.Create("general"), "General discussion");
+        channel.AddMember(userId, MemberRole.Admin);
+
+        var repository = new FakeChannelRepository();
+        repository.Seed(channel);
+
+        var service = new ChannelAppService(
+            repository,
+            new ChannelConverter(),
+            new FakeMessageClient(),
+            NullLogger<ChannelAppService>.Instance);
+
+        // Act
+        var membership = await service.GetMembershipAsync(
+            channel.Id, userId, CancellationToken.None);
+
+        // Assert
+        membership.Should().NotBeNull();
+        membership!.IsMember.Should().BeTrue();
+        membership.Role.Should().Be("Admin");
+    }
+
+    [Fact]
+    public async Task GetMembershipAsync_ReturnsNull_WhenTheChannelDoesNotExist()
+    {
+        // Arrange
+        var repository = new FakeChannelRepository();
+
+        var service = new ChannelAppService(
+            repository,
+            new ChannelConverter(),
+            new FakeMessageClient(),
+            NullLogger<ChannelAppService>.Instance);
+
+        // Act
+        var membership = await service.GetMembershipAsync(
+            Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        membership.Should().BeNull();
+    }
 }
