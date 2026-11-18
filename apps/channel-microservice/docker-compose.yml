@@ -24,6 +24,21 @@ services:
     environment:
       VAULT_ADDR: http://127.0.0.1:8200
 
+  fluentd:
+    image: fluent/fluentd:latest
+    container_name: bizcord-fluentd
+    user: root
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf
+      - /var/lib/docker/containers:/fluentd/log/containers:ro
+    environment:
+      - FLUENTD_CONF=fluent.conf
+    logging:
+      driver: "local"
+
   channel-service:
     build:
       context: .
@@ -34,8 +49,12 @@ services:
         condition: service_healthy
       vault:
         condition: service_started
+      fluentd:
+        condition: service_started
     ports:
       - "8000:8080"
+    logging:
+      driver: "json-file"
     environment:
       - "Messaging__Host=rabbitmq"
       - "Vault__Address=http://vault:8200"
