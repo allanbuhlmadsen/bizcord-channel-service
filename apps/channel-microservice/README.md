@@ -5,13 +5,14 @@ and is the source of truth for who may read and write in a channel.
 
 ## Running with Docker Compose
 
-Starts RabbitMQ, HashiCorp Vault and the service together. The service waits for RabbitMQ to pass its health check, and reads its messaging credentials from Vault at startup. See "Secrets" below for what Vault needs before the first run.
+Starts RabbitMQ, HashiCorp Vault, a Fluentd logging sidecar and the service together. The service waits for RabbitMQ to pass its health check, and reads its messaging credentials from Vault at startup. See "Secrets" below for what Vault needs before the first run, and "Logging" for what the sidecar does.
 
     docker compose up -d --build
 
 - API: http://localhost:8000
 - RabbitMQ management UI: http://localhost:15672 (guest / guest)
 - Vault UI: http://localhost:8200
+- Collected logs: `docker compose logs fluentd`
 
 Stop everything again:
 
@@ -56,6 +57,32 @@ The application token expires. Create a new one with the `vault token create` co
 The service does not start. There is no fallback, and that is deliberate: a fallback would mean a copy of the credentials somewhere outside Vault, which is what this is meant to remove.
 
 A service that is **already running** keeps working while Vault is sealed, because it read the secret once at startup and holds it in memory. The task text says requests should fail while Vault is sealed; that holds for a service that reads the secret on every request, not for one that reads it at startup, which is what the same task text asks for. The failure shows up on the next start.
+
+## Logging
+
+The service writes its logs to stdout and knows nothing about where they go from there. A Fluentd sidecar collects them.
+
+Docker stores each container's stdout as a JSON file under `/var/lib/docker/containers`. The `fluentd` service mounts that directory read-only, tails the files, and writes what it finds to its own stdout, standing in for a central log system. Neither the service's code nor its `appsettings.json` mentions Fluentd. Only `docker-compose.yml`, which wires the containers together, knows the sidecar exists — and all it says there is that the service should start after it and keep Docker's default log driver. That is the point of the pattern: shipping logs is a peripheral concern, and the service is not the place where it is solved.
+
+See what the sidecar collected:
+
+    docker compose logs fluentd
+
+Each record carries the originating container in its tag, the line itself in `log`, and whether it came from stdout or stderr in `stream`.
+
+### Three departures from the assignment's example
+
+`user: root` on the `fluentd` service. Docker's log files are readable only by root, and the Fluentd image runs as the user `fluent`.
+
+`logging: driver: "local"` on the `fluentd` service. Without it Fluentd tails its own log file: it writes to stdout, Docker stores that as JSON, Fluentd reads it back and writes it again. The `local` driver stores logs under a path the `*/*.log` pattern does not match, and `docker compose logs fluentd` keeps working.
+
+A `<parse>` block in `fluentd/fluent.conf` instead of `format json`. The example takes the `time` field as the record's timestamp but expects a number, while Docker writes a string. Every record was stamped `1970-01-01` until the format was named explicitly.
+
+### What this is, and what it is not
+
+A sidecar in the strict sense runs alongside one service and sees only that service. This one mounts the host's log directory, so it collects from every container on the machine, RabbitMQ and Vault included. It is closer to a node-level log agent than to a sidecar. That is what the assignment's example produces, and it is worth knowing the difference.
+
+A new container's log file is discovered on a refresh that runs about once a minute, and tailing then starts at the end of the file. Lines written between a container starting and its file being discovered are not collected. That was visible the first time the service was restarted under the sidecar: the channel created 33 seconds too early never reached Fluentd.
 
 ## Running the tests
 
