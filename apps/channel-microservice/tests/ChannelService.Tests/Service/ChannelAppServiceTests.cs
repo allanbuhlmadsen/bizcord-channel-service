@@ -84,4 +84,51 @@ public class ChannelAppServiceTests
         // Assert
         membership.Should().BeNull();
     }
+
+    [Fact]
+    public async Task GetMembersAsync_ReturnsEveryMember_WithTheirRoles()
+    {
+        // Arrange
+        var admin = Guid.NewGuid();
+        var member = Guid.NewGuid();
+
+        var channel = Channel.Create(ChannelName.Create("general"), "General discussion");
+        channel.AddMember(admin, MemberRole.Admin);
+        channel.AddMember(member, MemberRole.Member);
+
+        var repository = new FakeChannelRepository();
+        repository.Seed(channel);
+
+        var service = new ChannelAppService(
+            repository,
+            new ChannelConverter(),
+            new FakeMessageClient(),
+            NullLogger<ChannelAppService>.Instance);
+
+        // Act
+        var members = await service.GetMembersAsync(channel.Id, CancellationToken.None);
+
+        // Assert
+        members.Should().NotBeNull();
+        members!.Should().HaveCount(2);
+        members.Should().ContainSingle(m => m.UserId == admin && m.Role == "Admin");
+        members.Should().ContainSingle(m => m.UserId == member && m.Role == "Member");
+    }
+
+    [Fact]
+    public async Task GetMembersAsync_ReturnsNull_WhenTheChannelDoesNotExist()
+    {
+        // Arrange
+        var service = new ChannelAppService(
+            new FakeChannelRepository(),
+            new ChannelConverter(),
+            new FakeMessageClient(),
+            NullLogger<ChannelAppService>.Instance);
+
+        // Act
+        var members = await service.GetMembersAsync(Guid.NewGuid(), CancellationToken.None);
+
+        // Assert
+        members.Should().BeNull();
+    }
 }
