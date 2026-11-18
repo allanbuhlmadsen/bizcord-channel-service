@@ -76,6 +76,27 @@ public sealed class ChannelAppService : IChannelAppService
         };
     }
 
+    public async Task<IEnumerable<ChannelMemberDto>?> GetMembersAsync(
+        Guid channelId,
+        CancellationToken cancellationToken = default)
+    {
+        var channel = await _repository.GetByIdAsync(channelId, cancellationToken);
+
+        if (channel is null)
+        {
+            return null;
+        }
+
+        return channel.Members
+            .Select(member => new ChannelMemberDto
+            {
+                UserId = member.UserId,
+                Role = member.Role.ToString(),
+                JoinedAt = member.JoinedAt
+            })
+            .ToList();
+    }
+
     public async Task<ChannelDto> CreateAsync(
         CreateChannelRequest request,
         Guid? createdBy,

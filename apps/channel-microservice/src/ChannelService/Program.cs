@@ -1,3 +1,4 @@
+using ChannelService.GraphQL;
 using ChannelService.Messaging;
 using ChannelService.Models;
 using ChannelService.Shared;
@@ -27,6 +28,12 @@ builder.Services.AddControllers();
 
 builder.Services.AddSingleton<IConverter<Channel, ChannelDto>, ChannelConverter>();
 
+builder.Services
+    .AddGraphQLServer()
+    .AddQueryType<ChannelQuery>()
+    .AddMutationType<ChannelMutation>()
+    .AddTypeExtension<ChannelDtoExtensions>();
+
 var messagingHost = builder.Configuration["Messaging:Host"]
     ?? throw new InvalidOperationException("Messaging:Host is not configured.");
 
@@ -47,5 +54,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+app.MapGraphQL();
 
 app.Run();

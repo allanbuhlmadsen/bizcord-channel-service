@@ -21,6 +21,10 @@ public interface IChannelAppService
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    Task<IEnumerable<ChannelMemberDto>?> GetMembersAsync(
+        Guid channelId,
+        CancellationToken cancellationToken = default);
+
     Task<ChannelDto> CreateAsync(
         CreateChannelRequest request,
         Guid? createdBy,

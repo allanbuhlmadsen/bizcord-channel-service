@@ -9,7 +9,8 @@ Starts RabbitMQ, HashiCorp Vault, a Fluentd logging sidecar and the service toge
 
     docker compose up -d --build
 
-- API: http://localhost:8000
+- REST API: http://localhost:8000
+- GraphQL: http://localhost:8000/graphql
 - RabbitMQ management UI: http://localhost:15672 (guest / guest)
 - Vault UI: http://localhost:8200
 - Collected logs: `docker compose logs fluentd`
@@ -132,6 +133,43 @@ An API gateway in front of this service is expected to populate that header from
 `GET /channels/{id}/members/{userId}` is meant for other services, not for clients. It needs an `X-Role` header with the value `internal-service` and returns `403` without one.
 
 An API gateway sets that header from a `role` claim in the caller's token and removes whatever the client sent, in the same way it sets `X-UserId`. A client's own token is refused even though it is valid, because it carries a scope rather than a role.
+
+## GraphQL
+
+Alongside the REST API the service exposes a GraphQL endpoint at `/graphql`. Opening it in a browser serves Nitro, HotChocolate's query editor.
+
+    http://localhost:8000/graphql
+
+Both presentation layers call the same service layer, `IChannelAppService`, so neither can drift away from the other's behaviour.
+
+### What the schema offers
+
+| Field | Kind | What it does |
+| --- | --- | --- |
+| `channels` | Query | Every channel |
+| `channel(id)` | Query | One channel |
+| `channelsForUser(userId)` | Query | The channels a user belongs to |
+| `createChannel(input)` | Mutation | Creates a channel, with the creator as an `Admin` member |
+
+A channel also has a `members` field, which the REST API has no equivalent for:
+
+    query {
+      channel(id: "...") {
+        name
+        memberCount
+        members { userId role joinedAt }
+      }
+    }
+
+Over REST the same answer takes two calls, and the second one does not exist. `GET /channels/{id}/members/{userId}` answers for one user at a time, and `ChannelDto` carries only a count. Here the members are fetched in the same request, and only when the query asks for them.
+
+The reverse holds as well. `query { channels { name } }` returns names and nothing else, where `GET /channels` always sends the whole DTO.
+
+### Why it lives in this service
+
+The assignment's objective describes a new service, while its requirements say to add a presentation layer to this microservice and to reuse its service layer. Both cannot hold: reusing the service layer means running in the same process. The requirements were followed.
+
+A backend-for-frontend in the strict sense is its own deployable unit, with its own release cycle, calling the services it aggregates over the network. What is here is a second presentation layer inside one service. It demonstrates the shaping a backend-for-frontend does, but not the independence.
 
 ## Structure
 
